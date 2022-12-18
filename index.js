@@ -1,4 +1,5 @@
 const { Client, LocalAuth, List, Buttons, MessageMedia } = require("whatsapp-web.js");
+const { Configuration, OpenAIApi } = require("openai");
 const qrcode = require("qrcode-terminal");
 const yt = require('youtube-search-without-api-key');
 const fetch = require("node-fetch");
@@ -22,6 +23,12 @@ const { translate } = require('free-translate');
 (async () => {
   const newUrl = await wiki.setLang('es');
 })()
+
+const configuration = new Configuration({
+  apiKey: "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",
+});
+const openai = new OpenAIApi(configuration);
+
 let PORT = process.env.PORT || 5000;
 let YOUTUBE_API_KEY = "AIzaSyAPciRL1VHGuBL94m8o4J6-XeEhlAjXH70";
 let YOUTUBE_API_KEY2 = "AIzaSyD2wa8hi4tLwLM88qVE5Ee0D-CBUVzmDwM";
@@ -31,6 +38,10 @@ let YOUTUBE_MP3_API_KEY = "719706c554mshf25d812f9222fecp1befc0jsnb324b5020749";
 let YOUTUBE_MP3_HOST = "youtube-mp36.p.rapidapi.com";
 
 let TENOR_API_KEY = "AIzaSyAPciRL1VHGuBL94m8o4J6-XeEhlAjXH70";
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
 
 var animeStickers = [
   "https://dark-kitchen.sfo3.cdn.digitaloceanspaces.com/20220727_128/file_9781777_128x128.webp",
@@ -2430,7 +2441,7 @@ client.on("message", async (msg) => {
     } catch (e) {
       console.log(e);
     }
-  } else if (msg.body.startsWith("!mp3") && msg.body.toLocaleLowerCase().replace("!mp3", "").replaceAll(" ", "") !== "" && msg.body.toLocaleLowerCase().replace("!mp3", "").trim() != "status") {
+  } else if (msg.body.startsWith("!mp3x") && msg.body.toLocaleLowerCase().replace("!mp3x", "").replaceAll(" ", "") !== "" && msg.body.toLocaleLowerCase().replace("!mp3", "").trim() != "status") {
 
     const busqueda = msg.body.toLocaleLowerCase().replace("!mp3", "").trim();
     // const videos = await yt.search(busqueda);
@@ -2525,6 +2536,57 @@ client.on("message", async (msg) => {
     } catch (e) {
 
     }
+  } else if (msg.body.startsWith("!mp3 ") && msg.body.toLowerCase().replace("!mp3 ", "").replaceAll(" ", "") !== "" && msg.body.toLowerCase().replace("!mp3 ", "").trim() != "status") {
+    const busqueda = msg.body.toLowerCase().replace("!mp3 ", "");
+
+    try {
+      const videos = await yt.search(busqueda);
+
+      var videoID = videos[0].id.videoId;
+      const axios = require("axios");
+
+      const options = {
+        method: 'GET',
+        url: 'https://t-one-youtube-converter.p.rapidapi.com/api/v1/createProcess',
+        params: {
+          url: 'https://www.youtube.com/watch?v=' + videoID,
+          format: 'mp3',
+          responseFormat: 'json',
+          lang: 'en'
+        },
+        headers: {
+          'X-RapidAPI-Key': '719706c554mshf25d812f9222fecp1befc0jsnb324b5020749',
+          'X-RapidAPI-Host': 't-one-youtube-converter.p.rapidapi.com'
+        }
+      };
+
+      axios.request(options).then(async function (response) {
+        if(response.data.message == "already downloaded"){
+          const media = await MessageMedia.fromUrl(response.data.YoutubeAPI.urlMp3);
+          msg.reply(media);
+        }else{
+          msg.reply("Intentalo nuevamente en un minuto...");
+        }
+      }).catch(function (error) {
+        console.error(error);
+      });
+
+    } catch (e) {
+
+    }
+
+
+    // msg.reply(JSON.stringify(response.headers));
+    // if (Object.keys(response.headers).includes('content-type') && response.headers['content-type'] === 'audio/webm') {
+    //   const base64Video = Buffer.from(response.data).toString('base64')
+    //   msg.reply(String(base64Video));
+
+    //   const media = new MessageMedia('audio/ogg', base64Video);
+    //   //msg.reply(media, undefined, {sendAudioAsVoice: true})
+    // }
+
+
+
   } else if (msg.body.toLowerCase().trim().startsWith("!reverse ")) {
     var reversed = msg.body.toLowerCase().replace("!reverse ", "").trim().split("").reverse().join("");
     msg.reply(reversed);
@@ -2832,6 +2894,16 @@ client.on("message", async (msg) => {
     translate('This is cool!', { to: 'es' }).then((translatedText) => {
       msg.reply(translatedText);
     })
+  } else if (msg.body.toLowerCase().startsWith("!ia ")) {
+    const completion = await openai.createCompletion({
+      model: "text-davinci-002",
+      max_tokens: 1024,
+      temperature: 0.5,
+      prompt: msg.body.toLowerCase().replace("!ia ", "").trim(),
+    });
+    //console.log(completion.data.choices[0].text);
+    msg.reply(completion.data.choices[0].text.trim());
+
   } else if (msg.body.toLocaleLowerCase().startsWith("!menu")) {
     const menu = new List(
       "Bot de utilidades variadas", //body
